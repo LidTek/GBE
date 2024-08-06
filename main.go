@@ -1,7 +1,9 @@
 package main
 
 import (
+	"log"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
@@ -33,6 +35,21 @@ func main() {
 			return
 		}
 		w.Write([]byte("Hello, " + session.Values["ID"].(string)))
+	})
+
+	http.HandleFunc("/rooms", func(w http.ResponseWriter, r *http.Request) {
+		session, err := track(w, r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		switch r.Method {
+		case "POST": // POST attempts to create the room.
+			httpCreateRoom(w, r, session.Values["ID"].(string))
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	http.HandleFunc("/rooms/{rid}", func(w http.ResponseWriter, r *http.Request) {
@@ -68,6 +85,24 @@ func main() {
 			httpGetUser(w, r, r.PathValue("uid"))
 		}
 	})
+
+	go func() {
+		var totalUsers, totalRooms int
+		for {
+			totalUsers += cleanupUsers()
+			time.Sleep(10 * time.Second)
+			totalRooms += cleanupRooms()
+			time.Sleep(10 * time.Second)
+			if totalUsers > 30 {
+				log.Printf("cleaned up %d users", totalUsers)
+				totalUsers = 0
+			}
+			if totalRooms > 30 {
+				log.Printf("cleaned up %d rooms", totalRooms)
+				totalRooms = 0
+			}
+		}
+	}()
 
 	http.ListenAndServe(":9000", nil)
 }

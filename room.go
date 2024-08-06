@@ -40,12 +40,15 @@ func (r *Room) expired() bool {
 
 var rooms = make(map[string]Room)
 
-func cleanupRooms() {
+func cleanupRooms() int {
+	count := 0
 	for id, room := range rooms {
 		if room.expired() {
 			delete(rooms, id)
+			count++
 		}
 	}
+	return count
 }
 
 func touchRoom(id string) {

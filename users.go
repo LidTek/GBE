@@ -11,12 +11,15 @@ type User struct {
 
 var users = make(map[string]User)
 
-func cleanupUsers() {
+func cleanupUsers() int {
+	count := 0
 	for id, user := range users {
 		if time.Since(user.last) > 30*time.Second {
 			delete(users, id)
+			count++
 		}
 	}
+	return count
 }
 
 func touchUser(id string) {
